@@ -173,12 +173,13 @@ my $mapper_options = "mem -t 2"; # sets defaults
 if (exists $commands[2])
 	{
 	chomp $commands[2];
-	if ($commands[2] =~ /(.*)\s(.*)/)
+	if ($commands[2] =~ /(.*?)\s(.*)/)
 		{
 		$mapper_full = $1;
+		$mapper_options = $2;
 		$mapper = $mapper_full;
 		if ($mapper_full =~ /.*\/(.*)/) {$mapper = $1;}
-		$mapper_options = $2;
+
 		}
 	else {
 		$mapper_full = $commands[2];
@@ -186,7 +187,7 @@ if (exists $commands[2])
 		if ($mapper_full =~ /.*\/(.*)/) {$mapper = $1;}
 		if ($mapper eq "bowtie2")
 			{
-			$mapper_options = "-p 2 --end-to-end --very-sensitive";
+			$mapper_options = "-p 2 --end-to-end --very-sensitive"; # sets defaults for bowtie2
 			}
 		}
 	}
