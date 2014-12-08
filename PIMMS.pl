@@ -1558,16 +1558,16 @@ my $Rscript_text = "
 # PIMMS counts output processing
 inter.unique.insertion.dist <- read.table(\"$name\.PIMMS.counts.min_cov.$minimum_coverage.unique.insertion.inter.distances\")
 data1 <- inter.unique.insertion.dist[,1]
-pdf(\"$name\.PIMMS.counts.min_cov.$minimum_coverage.inter.insertion.distances.density.plot.pdf\")
-d1 <- density(data1)
-plot(d1, main=\"Kernal Density $name inter-insertion distance\", lwd = 3, col=rgb(1,0,0,0.4), xlab = \"Inter unique insertion distance (bp)\")
+pdf(\"$name\.PIMMS.counts.min_cov.$minimum_coverage.inter.insertion.distances.histogram.pdf\")
+d1 <- hist(data1)
+plot(d1, main=\"$name inter-insertion distance\", lwd = 3, col=rgb(1,0,0,0.4), xlab = \"Inter unique insertion distance (bp)\")
 dev.off()
 
 unique.insertion.centile <- read.table(\"$name\.PIMMS.counts.min_cov.$minimum_coverage.unique.insertion.centile.positions\")
 data2 <- unique.insertion.centile[,1]
-pdf(\"$name\.PIMMS.counts.min_cov.$minimum_coverage.unique.insertion.centile.positions.density.plot.pdf\")
-d2 <- density(data2)
-plot(d2, main=\"Kernal Density $name unique insertion centile positions\", lwd = 3, col=rgb(1,0,0,0.4), xlab = \"Position centile\")
+pdf(\"$name\.PIMMS.counts.min_cov.$minimum_coverage.unique.insertion.centile.positions.histogram.pdf\")
+d2 <- hist(data2)
+plot(d2, main=\"$name unique insertion centile positions\", lwd = 3, col=rgb(1,0,0,0.4), xlab = \"Position centile\")
 dev.off()
 
 read.depth <- read.table(\"$name\.PIMMS.counts.min_cov.$minimum_coverage.insertion.positions.depths\", skip= 1, sep = \'\t\', quote = \"\")
@@ -1639,12 +1639,12 @@ NRM <- summary.in[,12]
 NIM <- summary.in[,13]
 logNRM <- log(NRM)
 logNIM <- log(NIM)
-d3 <- density(NRM)
-d4 <- density(NIM)
+d3 <- hist(NRM)
+d4 <- hist(NIM)
 pdf(\"$name\.PIMMS.counts.min_cov.$minimum_coverage.summary.plots.pdf\")
 par(mfrow=c(2,2))
-plot(d3, main=\"Kernal Density $name NRM\", lwd = 3, col=rgb(1,0,0,0.4), xlab = \"NRM\")
-plot(d4, main=\"Kernal Density $name NIM\", lwd = 3, col=rgb(1,0,0,0.4), xlab = \"NIM\")
+plot(d3, main=\"Histogram $name NRM\", lwd = 3, col=rgb(1,0,0,0.4), xlab = \"NRM\")
+plot(d4, main=\"Histogram $name NIM\", lwd = 3, col=rgb(1,0,0,0.4), xlab = \"NIM\")
 hist(logNRM, col=rgb(1,0,0,0.4), main=\"natural log transformed NRM\", border = rgb(1,0,0,0.4))
 hist(logNIM, col=rgb(1,0,0,0.4), main=\"natural log transformed NIM\", border = rgb(1,0,0,0.4))
 dev.off()
