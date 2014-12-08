@@ -764,7 +764,7 @@ my $time = localtime;
 
 print LOG "$process_usage\n";
 my $commandline = $0;
-print LOG "Command Used\n$commandline -m $module -s $sam -n $name -c $collapse_bp -m $mismatch -a $ascore\n\n";
+print LOG "Command Used\n$commandline -m $module -s $sam -n $name -c $collapse_bp -mis $mismatch -a $ascore\n\n";
 print LOG "Time Started \= $time";
 
 
