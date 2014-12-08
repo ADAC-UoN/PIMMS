@@ -1015,7 +1015,7 @@ my $time = localtime;
 
 print LOG "$usage\n";
 my $commandline = $0;
-print LOG "Command Used\n$commandline -m $module -d $depth_file -gtf $gtf -g $genome -m $minimum_coverage -n $name\n\n";
+print LOG "Command Used\n$commandline -m $module -d $depth_file -gtf $gtf -g $genome -cov $minimum_coverage -n $name\n\n";
 print LOG "Time Started \= $time";
 
 
