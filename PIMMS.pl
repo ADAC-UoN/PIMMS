@@ -14,7 +14,7 @@ use Statistics::Descriptive;
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
-my $VERSION = "PIMMS pipeline version 1.9 Dec 2014";
+my $VERSION = "PIMMS pipeline version 1.91 Dec 2014";
 
 my $usage = "===========================================================================================================
 Pragmatic Insertional Mutation Mapping system (PIMMS) mapping pipeline\n===========================================================================================================
@@ -39,7 +39,7 @@ type PIMMS.pl -m [module] without options for module specific help and usage.\n"
 
 
 my ($version, $help, $module);
-my ($command, $input1, $input2, $encoding, $run_id, $genome, $minimum_length, $maximum_length, $name);
+my ($command, $input1, $input2, $encoding, $run_id, $genome, $minimum_length, $maximum_length, $name, $quality_switch);
 my ($sam,$collapse_bp, $mismatch, $ascore);
 my ($depth_file, $gtf,$minimum_coverage);
 my ($input, $output, $distance_to_collapse);
@@ -58,6 +58,7 @@ GetOptions(
 	'min|minimum:s'     => \$minimum_length,
 	'max|maximum:s'     => \$maximum_length,
 	'n|name:s'     => \$name,	
+	'q|quality:s' => \$quality_switch,
 
         's|sam:s'     => \$sam,
 	'col|collapse:s'     => \$collapse_bp,
@@ -71,6 +72,7 @@ GetOptions(
         'in|input:s'     => \$input, 
 	'out|output:s'     => \$output,
 	'dist|distance:s'     => \$distance_to_collapse,
+	
 );
 
 if(defined $version) {
@@ -118,11 +120,11 @@ USAGE:
 -j	Fastq file 2 if single end reads write \"-j FALSE\"
 -g	Path to reference genome for mapping
 -e	Illumina encoding type [sanger, solexa or illumina]
--r 	Run id to be matched in fastq file e.g. \"\@M01661\"
+-r 	Run id to be matched in fastq file e.g. \@M01661 including the \"@\"
 -min	Minimum length of sequence post trimming to ensure is retained
 -max	Maximum length of sequence post trimming that is returned
 -n	Short name for identification of files (no spaces in name)
-
+-q	generate fastq QC plots (can be slow with large fastq files) Y/N
 ===========================================================================================================
 ";
 
@@ -153,6 +155,13 @@ print "$mapping_usage\nWARNING: Cannot proceed without maximum length of sequenc
 elsif( ! defined $name) {
 print "$mapping_usage\nWARNING: Cannot proceed without short name for identification of files\n\n"; exit;
 }
+elsif( ! defined $quality_switch) {
+print "$mapping_usage\nWARNING: Cannot proceed without conduct quality control plotting Y/N?\n\n"; exit;
+}
+
+
+$quality_switch = lc $quality_switch;
+unless ($quality_switch eq "y" || $quality_switch eq "n"){print "$mapping_usage\nWARNING: Cannot proceed without conduct quality control plotting Y/N?\n\n"; exit;}
 
 
 #############################################################################################################################
@@ -276,32 +285,35 @@ if ($input2 ne "FALSE") {
 # RAW QUALITY PLOTS
 # fastxtoolkit is used to generate quality plots of raw input fastq file. 
 #############################################################################################################################
-my $fastx_command1 = "fastx_quality_stats -i $input1 -o $name1.QC.stats";
-my $fastx_command3 = "fastq_quality_boxplot_graph.sh -i $input1.QC.stats -t $input1 -o $name1.Quality.png";
-if ($encoding eq "sanger")
-	{
-	$fastx_command1 = "fastx_quality_stats -Q33 -i $input1 -o $name1.QC.stats";
-	}
-system "$fastx_command1";
-system "$fastx_command3";
 
-if ($input2 ne "FALSE") {
-	my $fastx_command2 = "fastx_quality_stats -i $input2 -o $name2.QC.stats";
-	my $fastx_command4 = "fastq_quality_boxplot_graph.sh -i $input2.QC.stats -t $input2 -o $name2.Quality.png";
+if ($quality_switch eq "y")
+	{
+	my $fastx_command1 = "fastx_quality_stats -i $input1 -o $name1.QC.stats";
+	my $fastx_command3 = "fastq_quality_boxplot_graph.sh -i $input1.QC.stats -t $input1 -o $name1.Quality.png";
 	if ($encoding eq "sanger")
 		{
-		$fastx_command2 = "fastx_quality_stats -Q33 -i $input2 -o $name2.QC.stats";	
+		$fastx_command1 = "fastx_quality_stats -Q33 -i $input1 -o $name1.QC.stats";
 		}
-	system "$fastx_command2";
-	system "$fastx_command4";
-	}
+	system "$fastx_command1";
+	system "$fastx_command3";
 
-print  LOG "\n=========================================================================\nQuality control plots of input data see directory PIMMS.QC.plots\nQuailty of reads per base position\n$input1.Quality.png\n";
-if ($input2 ne "FALSE")
-	{
-	print  LOG "$input2.Quality.png\n";
-	}
+	if ($input2 ne "FALSE") {
+		my $fastx_command2 = "fastx_quality_stats -i $input2 -o $name2.QC.stats";
+		my $fastx_command4 = "fastq_quality_boxplot_graph.sh -i $input2.QC.stats -t $input2 -o $name2.Quality.png";
+		if ($encoding eq "sanger")
+			{
+			$fastx_command2 = "fastx_quality_stats -Q33 -i $input2 -o $name2.QC.stats";	
+			}
+		system "$fastx_command2";
+		system "$fastx_command4";
+		}
 
+	print  LOG "\n=========================================================================\nQuality control plots of input data see directory PIMMS.QC.plots\nQuailty of reads per base position\n$input1.Quality.png\n";
+	if ($input2 ne "FALSE")
+		{
+		print  LOG "$input2.Quality.png\n";
+		}
+	}
 
 #############################################################################################################################
 # MATCH ISS insertion
@@ -342,6 +354,10 @@ foreach (@files_to_process)
 	push @short_names, $short;
 	my $count = 0;
 	my $hitcount = 0;
+
+	my $hit_but_short_m1 = 0;
+	my $hit_but_short_m2 = 0;
+	my $hit_but_short_m1_m2 = 0;
 	
 	open FASTQ, "$file_processing";
 	open OUT1, ">$short\.matched\.min$minimum_length\.max$maximum_length\.fastq";
@@ -371,6 +387,7 @@ foreach (@files_to_process)
 					print OUT1 "$run_id"."$fastq_id\n$captured_print\n$qual_id\n$captured_qual_print\n";
 					$hitcount++;
 					}
+				else {$hit_but_short_m1_m2++;}
 				$motif_1_and_2_hit_count++;
 				}
 			 
@@ -382,10 +399,6 @@ foreach (@files_to_process)
 				my $primer = $2;
 				my $captured = $3;
 				my $captured_length = length $captured;
-				
-				if ($fastqseq =~ /(.*)($motif_1)(.*)/){$motif_1_hit_count++;}
-				else {$motif_2_hit_count++;}
-				
 				my $padding_length = ((length $flank_left) + (length $primer));
 					
 					if ($captured_length >= $minimum_length)
@@ -397,6 +410,8 @@ foreach (@files_to_process)
 						print OUT1 "$run_id"."$fastq_id\n$captured_print\n$qual_id\n$captured_qual_print\n";
 						$hitcount++;
 						}
+				if ($fastqseq =~ /(.*)($motif_1)(.*)/){$motif_1_hit_count++; if ($captured_length < $minimum_length) {$hit_but_short_m1++;}}
+				if ($fastqseq =~ /(.*)($motif_2_rev_comp)(.*)/){$motif_2_hit_count++; if ($captured_length < $minimum_length) {$hit_but_short_m2++;}}
 				}
 			
 			
@@ -410,10 +425,7 @@ foreach (@files_to_process)
 				my $captured_length = length $captured;
 				my $length_to_capture = $maximum_length;
 				
-				if ($fastqseq =~ /(.*)($motif_2)(.*)/){$motif_2_hit_count++;}
-				else {$motif_1_hit_count++;}	
-				
-				
+			
 				if ($captured_length >= $minimum_length)
 						{
 						if ($captured_length < $maximum_length) {$length_to_capture = $captured_length;}
@@ -435,6 +447,8 @@ foreach (@files_to_process)
 						print OUT1 "$run_id"."$fastq_id\n$captured_print_rev\n$qual_id\n$captured_qual_print_rev\n";
 						$hitcount++;
 						}
+				if ($fastqseq =~ /(.*)($motif_2)(.*)/){$motif_2_hit_count++; if ($captured_length < $minimum_length) {$hit_but_short_m2++;}}
+				if ($fastqseq =~ /(.*)($motif_1_rev_comp)(.*)/){$motif_1_hit_count++; if ($captured_length < $minimum_length) {$hit_but_short_m1++;}}
 				}
 			
 			$count++;
@@ -447,13 +461,21 @@ foreach (@files_to_process)
 	print LOG "$file_processing\t$count\t$hitcount\t$hit_pc\n";
 	print LOG "=========================================================================\nMotif_matched_count\n";
 	
-	my $pc_motif_1 = sprintf ("%.2f", ($motif_1_hit_count/$hitcount)*100);
-	my $pc_motif_2 = sprintf ("%.2f", ($motif_2_hit_count/$hitcount)*100);
-	my $pc_motif_1_and_2 = sprintf ("%.2f", ($motif_1_and_2_hit_count/$hitcount)*100);
+	my $pc_motif_1 = sprintf ("%.2f", (($motif_1_hit_count-$hit_but_short_m1)/$hitcount)*100);
+	my $pc_motif_2 = sprintf ("%.2f", (($motif_2_hit_count-$hit_but_short_m2)/$hitcount)*100);
+	my $pc_motif_1_and_2 = sprintf ("%.2f", (($motif_1_and_2_hit_count-$hit_but_short_m1_m2)/$hitcount)*100);
 	
-	print LOG "Motif 1\($motif_1\) or reverse complement $motif_1_hit_count \($pc_motif_1\% of $hitcount\)\n";
-	print LOG "Motif 2\($motif_2\) or reverse complement $motif_2_hit_count \($pc_motif_2\% of $hitcount\)\n";
-	print LOG "Motif 1 AND Motif 2 in single read $motif_1_and_2_hit_count \($pc_motif_1_and_2\% of $hitcount\)\n";
+	my $motif_1_hit_count_long = ($motif_1_hit_count-$hit_but_short_m1);
+	my $motif_2_hit_count_long = ($motif_2_hit_count-$hit_but_short_m2);
+	my $motif_1_and_2_hit_count_long = ($motif_1_and_2_hit_count-$hit_but_short_m1_m2);
+	
+	print LOG "Motif 1\($motif_1\) or reverse complement passing minimum length cutoff $motif_1_hit_count_long \($pc_motif_1\% of $hitcount\)\n";
+	print LOG "Motif 2\($motif_2\) or reverse complement passing minimum length cutoff $motif_2_hit_count_long \($pc_motif_2\% of $hitcount\)\n";
+	print LOG "Motif 1 AND Motif 2 passing minimum length cut off $motif_1_and_2_hit_count_long \($pc_motif_1_and_2\% of $hitcount\)\n";
+	
+	print LOG "Motif 1\($motif_1\) matched but < minimum length $hit_but_short_m1\n";
+	print LOG "Motif 2\($motif_2\) matched but < minimum length $hit_but_short_m2\n";
+	print LOG "Motif 1 AND MOtif 2\ matched but < minimum length $hit_but_short_m1_m2\n";	
 	print LOG "=========================================================================\n";
 	close OUT1;
 }
@@ -570,21 +592,23 @@ if ($input2 ne "FALSE")
 # fastxtoolkit is used to determine and draw plots of read quality of the processed [(-n).PIMMS.processed.se.fastq] fastq file.
 #############################################################################################################################
 
-if ($input2 ne "FALSE")
+if ($quality_switch eq "y")
 	{
-	my $fastx_command5 = "fastx_quality_stats -i $name\.PIMMS.processed.se.fastq -o $name\.PIMMS.processed.se.fastq.QC.stats";
-	my $fastx_command6 = "fastq_quality_boxplot_graph.sh -i $name\.PIMMS.processed.se.fastq.QC.stats -o $name\.PIMMS.processed.se.fastq.Quality.png";
-	my $fastx_command7 = "fastx_nucleotide_distribution_graph.sh -i $name\.PIMMS.processed.se.fastq.QC.stats -o $name\.PIMMS.processed.se.fastq.Nucl.dist.png";
+	if ($input2 ne "FALSE")
+		{
+		my $fastx_command5 = "fastx_quality_stats -i $name\.PIMMS.processed.se.fastq -o $name\.PIMMS.processed.se.fastq.QC.stats";
+		my $fastx_command6 = "fastq_quality_boxplot_graph.sh -i $name\.PIMMS.processed.se.fastq.QC.stats -o $name\.PIMMS.processed.se.fastq.Quality.png";
+		my $fastx_command7 = "fastx_nucleotide_distribution_graph.sh -i $name\.PIMMS.processed.se.fastq.QC.stats -o $name\.PIMMS.processed.se.fastq.Nucl.dist.png";
 
-	if ($encoding eq "sanger") {$fastx_command5 = "fastx_quality_stats -Q33 -i $name\.PIMMS.processed.se.fastq -o $name\.PIMMS.processed.se.fastq.QC.stats";}
+		if ($encoding eq "sanger") {$fastx_command5 = "fastx_quality_stats -Q33 -i $name\.PIMMS.processed.se.fastq -o $name\.PIMMS.processed.se.fastq.QC.stats";}
 
-	system "$fastx_command5";
-	system "$fastx_command6";
-	system "$fastx_command7";
+		system "$fastx_command5";
+		system "$fastx_command6";
+		system "$fastx_command7";
 
-	print  LOG "=========================================================================\nQuality control plots of Processed Data see directory PIMMS.QC.plots\nQuailty of reads per base position\:PIMMS.processed.se.fastq.Quality.png\nNucleotide Distribution\:PIMMS.processed.se.fastq.Nucl.dist.png\n";
-	}
-
+		print  LOG "=========================================================================\nQuality control plots of Processed Data see directory PIMMS.QC.plots\nQuailty of reads per base position\:PIMMS.processed.se.fastq.Quality.png\nNucleotide Distribution\:PIMMS.processed.se.fastq.Nucl.dist.png\n";
+		}
+}
 #############################################################################################################################
 # MAPPING WITH CHOSEN ALIGNER
 #############################################################################################################################
@@ -706,8 +730,11 @@ if (-e "$genome\.amb")
 unless (-d "Mapped.reads.sam.file"){system "mkdir Mapped.reads.sam.file";}
 system "mv *.mapped.sam Mapped.reads.sam.file\/";
 
-if (-e "PIMMS.QC.plots"){system "mv *.png *.stats ./PIMMS.QC.plots\/";}
-else {system  "mkdir PIMMS.QC.plots"; system "mv *.png *.stats ./PIMMS.QC.plots\/";}
+if ($quality_switch eq "y")
+	{
+	if (-e "PIMMS.QC.plots"){system "mv *.png *.stats ./PIMMS.QC.plots\/";}
+	else {system  "mkdir PIMMS.QC.plots"; system "mv *.png *.stats ./PIMMS.QC.plots\/";}
+	}
 }
 
 
