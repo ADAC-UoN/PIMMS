@@ -1,9 +1,9 @@
 chmod u+x ./PIMMS.pl
-./PIMMS.pl -m mapping -c PIMMS.commands.txt -i test.IN.R1.fastq -j test.IN.R2.fastq -g 0140J.dna -e sanger -r @M01661 -min 20 -max 50 -n testIN
+./PIMMS.pl -m mapping -c PIMMS.commands.txt -i test.IN.R1.fastq -j test.IN.R2.fastq -g 0140J.dna -e sanger -q N -r @M01661 -min 20 -max 50 -n testIN
 ./PIMMS.pl -m process.sam -s Mapped.reads.sam.file/testIN.PIMMS.processed.se.fastq.mapped.sam -n testIN -col 8 -mis 0 -a 50
 ./PIMMS.pl -m counts -d PIMMS.position.depth.files/testIN.m0.a50.PIMMS.processing.collapse.8.positions.depths -g 0140J.dna -gtf S.uberis.gtf -cov 2 -n testIN
 
-./PIMMS.pl -m mapping -c PIMMS.commands.txt -i test.OUT.R1.fastq -j test.OUT.R2.fastq -g 0140J.dna -e sanger -r @M01661 -min 20 -max 50 -n testOUT
+./PIMMS.pl -m mapping -c PIMMS.commands.txt -i test.OUT.R1.fastq -j test.OUT.R2.fastq -g 0140J.dna -e sanger -q N -r @M01661 -min 20 -max 50 -n testOUT
 ./PIMMS.pl -m process.sam -s Mapped.reads.sam.file/testOUT.PIMMS.processed.se.fastq.mapped.sam -n testOUT -col 8 -mis 0 -a 50
 ./PIMMS.pl -m counts -d PIMMS.position.depth.files/testOUT.m0.a50.PIMMS.processing.collapse.8.positions.depths -g 0140J.dna -gtf S.uberis.gtf -cov 2 -n testOUT
 
