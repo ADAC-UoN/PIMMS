@@ -751,7 +751,7 @@ PIMMS pipeline turn sam file into read.depth.file for later analysis.
 USAGE:
 -s	Mapped reads in sam format
 -n	Short name for identification of output files (no spaces in name, keep short)
--col	Collapse and add depth of insertion EXACTLY x bp apart. (OPTIONAL use -c N to turn off).
+-col	Collapse and add depth of insertion EXACTLY x bp apart. (OPTIONAL use -col N to turn off).
 -mis	Maximum mismatch allowed in alignment (filters on \"MD\" tag of sam file)
 	if m = 0 or m >= 1 then counts mismatches
 	if fraction is given then counts proportion of read length ie 0.1 = 10% of read length can mismatch
